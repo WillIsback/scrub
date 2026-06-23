@@ -1,4 +1,4 @@
 [[rules]]
-id = "custom-api-key-flag"
-description = "Detected an API key passed via the --api-key CLI flag."
+id = "vllm-api-key"
+description = "Detected a vLLM API key defined via the --api-key argument."
 regex = '''--api-key\s+"[^"]+"'''

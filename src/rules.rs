@@ -21,6 +21,12 @@ pub fn load_embedded() -> Result<Vec<Rule>> {
     load_from_str(toml_str)
 }
 
+/// Load rules from the embedded custom.toml (compile-time).
+pub fn load_embedded_custom() -> Result<Vec<Rule>> {
+    let toml_str = include_str!("../config/custom.toml");
+    load_from_str(toml_str)
+}
+
 /// Load rules from a TOML string.
 pub fn load_from_str(toml_str: &str) -> Result<Vec<Rule>> {
     let config: GitleaksConfig = toml::from_str(toml_str)?;
