@@ -5,8 +5,8 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use clap::Parser;
 
-use scrub::rules;
-use scrub::{Redactor, Rule};
+use scrub_cli::rules;
+use scrub_cli::{Redactor, Rule};
 
 /// Redact secrets and PII from text using gitleaks detection rules.
 #[derive(Parser, Debug)]

@@ -1,9 +1,13 @@
 [package]
-name = "scrub"
-version = "0.1.0"
+name = "scrub-cli"
+version = "0.1.1"
 edition = "2021"
 license = "MIT"
 description = "Redact secrets and PII from text using gitleaks detection rules."
+
+[[bin]]
+name = "scrub"
+path = "src/main.rs"
 
 [dependencies]
 anyhow = "1"

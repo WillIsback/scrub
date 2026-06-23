@@ -33,7 +33,7 @@ Requires Rust 1.70+.
 ### From crates.io
 
 ```bash
-cargo install scrub
+    cargo install scrub-cli
 ```
 
 > *Not yet published — coming soon.*
