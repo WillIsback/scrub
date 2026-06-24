@@ -35,6 +35,33 @@ jobs:
         run: cargo run --release --bin cav-bench-confusion
         timeout-minutes: 15
 
+      - name: Publish results to job summary
+        run: |
+          PREC=$(jq '.metrics.precision * 100 | floor / 100' bench-results/latest.json)
+          REC=$(jq '.metrics.recall * 100 | floor / 100' bench-results/latest.json)
+          F1=$(jq '.metrics.f1' bench-results/latest.json)
+          ACC=$(jq '.metrics.accuracy * 100 | floor / 100' bench-results/latest.json)
+          DS=$(jq -r '.dataset' bench-results/latest.json)
+          RL=$(jq -r '.rules_loaded' bench-results/latest.json)
+          VER=$(jq -r '.version' bench-results/latest.json)
+          cat >> "$GITHUB_STEP_SUMMARY" <<-EOF
+          ## 📊 caviarder Benchmark Results
+
+          | Metric | Value | Baseline (gitleaks) |
+          |--------|-------|---------------------|
+          | Precision | **${PREC}%** | 52.6% |
+          | Recall | **${REC}%** | 24.4% |
+          | F1 | **${F1}** | 0.334 |
+          | Accuracy | **${ACC}%** | — |
+
+          **Dataset:** ${DS}  
+          **Rules loaded:** ${RL}  
+          **Version:** ${VER}
+          EOF
+
+      - name: Print raw JSON to log
+        run: cat bench-results/latest.json
+
       - name: Archive structured results
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
