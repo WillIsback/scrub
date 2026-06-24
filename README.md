@@ -1,5 +1,7 @@
 # caviarder
 
+[![Crates.io](https://img.shields.io/crates/v/caviarder)](https://crates.io/crates/caviarder)
+
 **Redact secrets from text using gitleaks detection rules.**
 
 `caviarder` (French for "to redact") is a fast Rust CLI that reads text from a file or stdin and replaces
