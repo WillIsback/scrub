@@ -32,8 +32,8 @@ struct Cli {
     #[arg(short, long)]
     output: Option<PathBuf>,
 
-    /// Replacement string for redacted values
-    #[arg(short, long, default_value = "[REDACTED]")]
+    /// Replacement string for redacted values (default: "[CAVIARDER]")
+    #[arg(short, long, default_value = "[CAVIARDER]")]
     placeholder: String,
 
     /// Scan only: exit 1 if secrets found, no output written

@@ -60,7 +60,7 @@ fn test_stdin_pipe() {
     let output = child.wait_with_output().unwrap();
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("[REDACTED]"));
+    assert!(stdout.contains("[CAVIARDER]"));
     assert!(!stdout.contains("AKIAIOSFODNN7EXAMPLE"));
 }
 
