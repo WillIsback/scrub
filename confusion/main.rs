@@ -19,7 +19,7 @@ fn load_metadata() -> Vec<Entry> {
     if !meta_dir.is_dir() {
         eprintln!("ERROR: metadata directory not found at '{META_DIR}'");
         eprintln!("Run `./scripts/setup-bench-data.sh` first to download the dataset.");
-        std::process::exit(0);
+        std::process::exit(1);
     }
 
     // Read all CSV files in the meta directory

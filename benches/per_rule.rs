@@ -60,7 +60,7 @@ fn bench_rules(c: &mut Criterion) {
         c,
         "slack-token",
         r"(xox[bp])-[0-9]{10,13}-[a-zA-Z0-9\-]{20,}",
-        "slack_token = xoxb-SLACK-BENCH-TOKEN-NOT-REAL-00000",
+        "slack_token = xoxb-1234567890-abcdef1234567890abcdef",
     );
 
     // JWT / eyJ...

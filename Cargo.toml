@@ -12,6 +12,10 @@ documentation = "https://github.com/WillIsback/caviarder"
 name = "cav"
 path = "src/main.rs"
 
+[[bin]]
+name = "cav-bench-confusion"
+path = "confusion/main.rs"
+
 [dependencies]
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
@@ -22,9 +26,6 @@ toml = "0.8"
 
 [dev-dependencies]
 criterion = { version = "0.8", features = ["html_reports"] }
-[[bin]]
-name = "cav-bench-confusion"
-path = "confusion/main.rs"
 
 [[bench]]
 name = "throughput"
