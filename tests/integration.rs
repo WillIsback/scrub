@@ -35,9 +35,15 @@ fn test_file_redact_basic() {
     // The fixture contains several known secret patterns.
     // At minimum, verify the output is shorter than the input (secrets were replaced).
     let input = std::fs::read_to_string("tests/fixtures/basic.txt").unwrap();
-    assert!(stdout.len() < input.len(), "output should be shorter than input");
+    assert!(
+        stdout.len() < input.len(),
+        "output should be shorter than input"
+    );
     // Verify the AWS key was redacted
-    assert!(!stdout.contains("AKIAIOSFODNN7EXAMPLE"), "AKIA key should be redacted");
+    assert!(
+        !stdout.contains("AKIAIOSFODNN7EXAMPLE"),
+        "AKIA key should be redacted"
+    );
 }
 
 #[test]

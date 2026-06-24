@@ -203,7 +203,10 @@ mod tests {
         let outcome = redactor.redact("low entropy AAAAAAAA high entropy sk-proj-abc123DEF456");
         // "AAAAAAAA" is 8 identical chars: entropy 0.0 < 4.0 → not redacted
         // "sk-proj-abc123DEF456" has mixed chars: entropy >= 4.0 → redacted
-        assert_eq!(outcome.text, "low entropy AAAAAAAA high entropy [CAVIARDER]");
+        assert_eq!(
+            outcome.text,
+            "low entropy AAAAAAAA high entropy [CAVIARDER]"
+        );
         assert_eq!(outcome.total(), 1);
     }
 

@@ -138,7 +138,8 @@ fn load_rules(cli: &Cli) -> Result<Vec<Rule>> {
     if !cli.no_default {
         let embedded = rules::load_embedded().context("failed to load embedded rules")?;
         rules.extend(embedded);
-        let custom = rules::load_embedded_custom().context("failed to load embedded custom rules")?;
+        let custom =
+            rules::load_embedded_custom().context("failed to load embedded custom rules")?;
         rules.extend(custom);
     }
 
