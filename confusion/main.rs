@@ -139,8 +139,16 @@ fn main() {
     println!();
     println!("=== Confusion Matrix (CredData) ===");
     println!(" Instances:  {total}");
-    println!(" True:       {} ({:.1}%)", tp + fn_, 100.0 * (tp + fn_) as f64 / total as f64);
-    println!(" False:      {} ({:.1}%)", fp + tn, 100.0 * (fp + tn) as f64 / total as f64);
+    println!(
+        " True:       {} ({:.1}%)",
+        tp + fn_,
+        100.0 * (tp + fn_) as f64 / total as f64
+    );
+    println!(
+        " False:      {} ({:.1}%)",
+        fp + tn,
+        100.0 * (fp + tn) as f64 / total as f64
+    );
     println!(" Skipped:    {skipped}");
     println!();
     println!("                Predicted");

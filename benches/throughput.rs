@@ -1,5 +1,5 @@
-use criterion::{criterion_group, criterion_main, Criterion};
 use caviarder::{Redactor, Rule};
+use criterion::{criterion_group, criterion_main, Criterion};
 use regex::Regex;
 use std::time::Duration;
 

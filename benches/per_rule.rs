@@ -1,5 +1,5 @@
-use criterion::{criterion_group, criterion_main, Criterion};
 use caviarder::{Redactor, Rule};
+use criterion::{criterion_group, criterion_main, Criterion};
 use regex::Regex;
 use std::time::Duration;
 
@@ -76,7 +76,7 @@ fn bench_rules(c: &mut Criterion) {
         c,
         "private-key",
         r"-----BEGIN\s?(RSA|EC|DSA|OPENSSH|PGP)?\s?PRIVATE KEY-----",
-        "-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA..." ,
+        "-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA...",
     );
 }
 
