@@ -13,6 +13,14 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@46268bd060767258de96ed93c1251119784f2ab6 # v1
       - run: cargo test
 
+      - name: Clippy (non-bloquant)
+        continue-on-error: true
+        run: cargo clippy --all-targets --no-deps
+
+      - name: Format (non-bloquant)
+        continue-on-error: true
+        run: cargo fmt --check
+
   release:
     needs: test
     runs-on: ubuntu-latest
