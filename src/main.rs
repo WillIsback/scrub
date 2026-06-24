@@ -57,7 +57,8 @@ struct Cli {
     no_default: bool,
 
     /// ML false-positive filter threshold (0.0 = disabled).
-    /// Higher values suppress more matches. Try 0.5 for balanced filtering.
+    /// Higher values are more conservative (only suppress high-confidence FPs).
+    /// Recommended: 0.90 (best F1: 0.690 on CredData benchmark).
     #[arg(long, default_value = "0.0")]
     ml_threshold: f64,
 

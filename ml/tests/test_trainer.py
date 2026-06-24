@@ -34,7 +34,7 @@ class TestTrainerFeatureMatrix:
         X, y = t.build_feature_matrix(rows)
         assert isinstance(X, np.ndarray)
         assert isinstance(y, np.ndarray)
-        assert X.shape == (2, 24)  # 2 samples, 24 features
+        assert X.shape == (2, 32)  # 2 samples, 32 features
         assert y.shape == (2,)
 
     def test_label_column(self):
@@ -113,4 +113,4 @@ class TestTrainerExport:
         ]
         results = t.cross_validate(rows)
         exported = t.export_rust(results)
-        assert "N_FEATURES: usize = 24" in exported
+        assert "N_FEATURES: usize = 32" in exported

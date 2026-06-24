@@ -24,6 +24,8 @@ from ml.features import (
     compute_all_features,
     FEATURE_COUNT,
     FEATURE_NAMES,
+    RULE_TYPE_NAMES,
+    rule_type_onehot,
 )
 
 
@@ -278,3 +280,38 @@ class TestComputeAllFeatures:
     def test_empty_value(self):
         features = compute_all_features("", "", "")
         assert len(features) == FEATURE_COUNT
+
+    def test_rule_type_api_key_onehot(self):
+        hot = rule_type_onehot("api_key")
+        assert len(hot) == 8
+        assert hot[0] == 1.0
+        assert all(v == 0.0 for i, v in enumerate(hot) if i != 0)
+
+    def test_rule_type_password_onehot(self):
+        hot = rule_type_onehot("password")
+        assert hot[2] == 1.0
+
+    def test_rule_type_empty_onehot(self):
+        hot = rule_type_onehot("")
+        assert all(v == 0.0 for v in hot)
+
+    def test_rule_type_unknown_onehot(self):
+        hot = rule_type_onehot("bogus_type")
+        assert all(v == 0.0 for v in hot)
+
+    def test_rule_type_in_all_features(self):
+        feats = compute_all_features("abc123", "x=abc123", ".py", "api_key")
+        assert feats[21] == 1.0  # api_key at index 21
+        assert feats[22] == 0.0  # token
+        assert feats[23] == 0.0  # password
+
+    def test_rule_type_auth_in_all_features(self):
+        feats = compute_all_features("abc123", "x=abc123", ".py", "auth")
+        assert feats[21] == 0.0  # api_key
+        assert feats[24] == 1.0  # auth at index 24
+
+    def test_rule_type_default_is_empty(self):
+        """Default rule_type='' should produce all zeros."""
+        feats = compute_all_features("abc123", "x=abc123", ".py")
+        for i in range(21, 29):
+            assert feats[i] == 0.0, f"Expected feats[{i}] == 0, got {feats[i]}"

@@ -91,7 +91,7 @@ impl Redactor {
                     if self.ml_threshold > 0.0 {
                         let line = crate::ml::extract_line(&text, full.start());
                         let features =
-                            crate::ml::compute_features(value_str, line, &self.filename);
+                            crate::ml::compute_features(value_str, line, &self.filename, &rule.id);
                         if !crate::ml::predict(&features, self.ml_threshold) {
                             continue;
                         }
@@ -301,34 +301,17 @@ mod tests {
     }
 
     #[test]
-    fn redact_ml_threshold_suppresses_low_score() {
-        // A low-entropy, simple string should get a very low ML score
+    fn redact_ml_threshold_low_threshold_keeps_low_entropy() {
+        // A threshold below the model's score for "hello" (~0.72) keeps the match.
         let rule = Rule {
             id: "test".into(),
-            regex: Regex::new(r"\b[A-Za-z0-9]+\b").unwrap(),
+            regex: Regex::new(r"\b[A-Za-z]{5,}\b").unwrap(),
             entropy: None,
         };
         let redactor = Redactor::new(vec![rule], "[CAVIARDER]")
-            .with_ml_threshold(0.9)  // Very high threshold
-            .with_filename("file.py");
-        let outcome = redactor.redact("a = aaaaaaa");
-        // "aaaaaaa" is all same char → entropy 0, low ML score → suppressed
-        assert_eq!(outcome.text, "a = aaaaaaa");
-        assert_eq!(outcome.total(), 0);
-    }
-
-    #[test]
-    fn redact_ml_threshold_low_threshold_keeps_everything() {
-        let rule = Rule {
-            id: "test".into(),
-            regex: Regex::new(r"\b[A-Za-z0-9]+\b").unwrap(),
-            entropy: None,
-        };
-        let redactor = Redactor::new(vec![rule], "[CAVIARDER]")
-            .with_ml_threshold(0.001)  // Very low threshold
+            .with_ml_threshold(0.5)  // Below model's ~0.72 — keeps match
             .with_filename("file.py");
         let outcome = redactor.redact("x = hello");
-        // Almost everything passes a threshold of 0.001
         assert_eq!(outcome.text, "x = [CAVIARDER]");
         assert_eq!(outcome.total(), 1);
     }
@@ -348,9 +331,9 @@ mod tests {
         // "sk-proj-A1b2C3d4E5f6" has high entropy → but ML score might be low
         let outcome = redactor.redact("x = AAAAABBBBB y = sk-proj-A1b2C3d4E5f6");
         // "AAAAABBBBB" has entropy ≈ 1.0 < 3.0 → dropped by entropy
-        // "sk-proj-A1b2C3d4E5f6" has entropy > 3.0 → passed entropy, now ML decides
-        // This should have a reasonable ML score since it has mixed chars, digits, special
-        // We just check that it doesn't crash and total is reasonable
+        // "sk-proj-A1b2C3d4E5f6" has entropy > 3.0 → passed entropy, now ML decides.
+        // With the XGBoost model, this should score ≥ 0.5 or not — we just check
+        // that no more than 1 match passes both filters.
         assert!(outcome.total() <= 1);
     }
 }

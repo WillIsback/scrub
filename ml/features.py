@@ -21,7 +21,7 @@ import numpy as np
 # and FEATURE_NAMES. Never reorder or delete — that shifts indices.
 # ---------------------------------------------------------------------------
 
-FEATURE_COUNT = 24
+FEATURE_COUNT = 32
 
 FEATURE_NAMES = [
     "entropy",
@@ -45,11 +45,30 @@ FEATURE_NAMES = [
     "has_quotes",
     "is_source_file",
     "is_config_file",
-    # 3 reserved for rule-type one-hot or future expansion
+    # Rule type one-hot (8 categories)
+    "rule_type_api_key",
+    "rule_type_token",
+    "rule_type_password",
+    "rule_type_auth",
+    "rule_type_private_key",
+    "rule_type_url",
+    "rule_type_uuid",
+    "rule_type_key",
+    # 3 reserved for future expansion
     "reserved_01",
     "reserved_02",
     "reserved_03",
 ]
+
+RULE_TYPE_NAMES = ["api_key", "token", "password", "auth", "private_key", "url", "uuid", "key"]
+
+def rule_type_onehot(rule_type: str) -> list[float]:
+    """8-element one-hot vector for rule type."""
+    vec = [0.0] * 8
+    if rule_type in RULE_TYPE_NAMES:
+        idx = RULE_TYPE_NAMES.index(rule_type)
+        vec[idx] = 1.0
+    return vec
 
 # ---------------------------------------------------------------------------
 # Value-level features
@@ -223,8 +242,9 @@ def compute_all_features(
     value: str,
     line: str,
     filename: str,
+    rule_type: str = "",
 ) -> np.ndarray:
-    """Compute all 24 features, return as float64 numpy array.
+    """Compute all 32 features, return as float64 numpy array.
 
     Parameters
     ----------
@@ -234,8 +254,12 @@ def compute_all_features(
         The full line of source code containing the value.
     filename : str
         The file path (used only for extension detection).
+    rule_type : str
+        Rule type category (api_key, token, password, auth, private_key,
+        url, uuid, key, or empty for no match).
     """
     is_src, is_cfg = _file_type_flags(filename)
+    rule_hot = rule_type_onehot(rule_type)  # 8 elements
 
     features = [
         compute_entropy(value),             # 0
@@ -259,9 +283,10 @@ def compute_all_features(
         float(has_quotes(line)),            # 18
         float(is_src),                      # 19
         float(is_cfg),                      # 20
-        0.0,                                # 21 reserved
-        0.0,                                # 22 reserved
-        0.0,                                # 23 reserved
+        *rule_hot,                          # 21-28 rule type one-hot
+        0.0,                                # 29 reserved
+        0.0,                                # 30 reserved
+        0.0,                                # 31 reserved
     ]
     assert len(features) == FEATURE_COUNT
     return np.array(features, dtype=np.float64)
