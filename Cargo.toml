@@ -26,6 +26,10 @@ csv = "1"
 name = "cav-bench-confusion"
 path = "confusion/main.rs"
 
+[[bench]]
+name = "throughput"
+harness = false
+
 [profile.release]
 strip = true
 lto = true
