@@ -1,0 +1,32 @@
+{
+  "dataset": "CredData (66,898 entries)",
+  "training_data": "Issue reports (54K instances, Zenodo)",
+  "baseline_no_ml": {
+    "precision": 0.559,
+    "recall": 0.43,
+    "f1": 0.486,
+    "mcc": 0.365,
+    "tp": 6492,
+    "fp": 5117,
+    "fn": 8612,
+    "tn": 46677
+  },
+  "with_ml_threshold_0_1": {
+    "precision": 0.722,
+    "recall": 0.405,
+    "f1": 0.519,
+    "mcc": 0.452,
+    "tp": 6113,
+    "fp": 2357,
+    "fn": 8991,
+    "tn": 49437
+  },
+  "improvement": {
+    "precision_delta": "+16.3pp",
+    "recall_delta": "-2.5pp",
+    "f1_delta": "+0.033",
+    "mcc_delta": "+0.087",
+    "fp_reduction": "-53.9%",
+    "tp_loss": "-5.8%"
+  }
+}

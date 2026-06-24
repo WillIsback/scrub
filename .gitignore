@@ -6,3 +6,8 @@
 
 # Benchmark results (structured JSON sidecar outputs)
 /bench-results/
+
+# ML training environment and data
+/ml/.venv/
+/ml/data/
+**/__pycache__/

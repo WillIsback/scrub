@@ -55,6 +55,16 @@ struct Cli {
     /// Don't load embedded default rules (use with --rules)
     #[arg(long)]
     no_default: bool,
+
+    /// ML false-positive filter threshold (0.0 = disabled).
+    /// Higher values suppress more matches. Try 0.5 for balanced filtering.
+    #[arg(long, default_value = "0.0")]
+    ml_threshold: f64,
+
+    /// Filename for ML feature computation (file extension matters).
+    /// Only used with --ml-threshold.
+    #[arg(long, default_value = "")]
+    filename: String,
 }
 
 fn main() -> Result<()> {
@@ -92,7 +102,13 @@ fn main() -> Result<()> {
     if rules.is_empty() {
         anyhow::bail!("no rules loaded (use --rules or check config/gitleaks.toml)");
     }
-    let redactor = Redactor::new(rules, &cli.placeholder);
+    let mut redactor = Redactor::new(rules, &cli.placeholder);
+    if cli.ml_threshold > 0.0 {
+        redactor = redactor.with_ml_threshold(cli.ml_threshold);
+        if !cli.filename.is_empty() {
+            redactor = redactor.with_filename(&cli.filename);
+        }
+    }
     let outcome = redactor.redact(&input);
 
     // --check mode

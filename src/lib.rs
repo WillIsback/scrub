@@ -1,4 +1,6 @@
 pub mod rules;
+pub mod ml;
+pub mod ml_model;
 
 use regex::Regex;
 
@@ -11,6 +13,8 @@ pub struct Rule {
 pub struct Redactor {
     rules: Vec<Rule>,
     placeholder: String,
+    filename: String,
+    ml_threshold: f64,
 }
 
 pub struct Outcome {
@@ -30,7 +34,22 @@ impl Redactor {
         Redactor {
             rules,
             placeholder: placeholder.into(),
+            filename: String::new(),
+            ml_threshold: 0.0,
         }
+    }
+
+    /// Enable ML-based false positive filtering at the given threshold.
+    /// Values below the threshold are suppressed (not redacted).
+    pub fn with_ml_threshold(mut self, threshold: f64) -> Self {
+        self.ml_threshold = threshold;
+        self
+    }
+
+    /// Set the filename for ML feature computation (file extension matters).
+    pub fn with_filename(mut self, filename: impl Into<String>) -> Self {
+        self.filename = filename.into();
+        self
     }
 
     /// Apply every rule in order, returning the scrubbed text and per-rule counts.
@@ -41,58 +60,63 @@ impl Redactor {
         for rule in &self.rules {
             let mut count = 0usize;
 
-            if let Some(min_entropy) = rule.entropy {
-                // Entropy threshold: only redact matches that meet the threshold.
-                // If the regex has a capture group, only group 1 is checked for
-                // entropy and redacted; the rest of the match is preserved.
-                struct MatchEntry {
-                    start: usize,
-                    end: usize,
-                    capture_start: Option<usize>,
-                    capture_end: Option<usize>,
-                }
-                let mut matches: Vec<MatchEntry> = Vec::new();
-                for caps in rule.regex.captures_iter(&text) {
-                    let full = caps.get(0).unwrap();
-                    let (check_str, capture_start, capture_end) = match caps.get(1) {
-                        Some(v) => (v.as_str(), Some(v.start()), Some(v.end())),
-                        None => (full.as_str(), None, None),
-                    };
-                    if shannon_entropy(check_str) >= min_entropy {
-                        matches.push(MatchEntry {
-                            start: full.start(),
-                            end: full.end(),
-                            capture_start,
-                            capture_end,
-                        });
+            // Collect all matches first (for both entropy and ML checks).
+            // This avoids position-shifting issues during replacement.
+            struct MatchEntry {
+                start: usize,
+                end: usize,
+                capture_start: Option<usize>,
+                capture_end: Option<usize>,
+            }
+            let mut matches: Vec<MatchEntry> = Vec::new();
+
+            for caps in rule.regex.captures_iter(&text) {
+                let full = caps.get(0).unwrap();
+                let (check_str, value_str, capture_start, capture_end) = match caps.get(1) {
+                    Some(v) => (v.as_str(), v.as_str(), Some(v.start()), Some(v.end())),
+                    None => (full.as_str(), full.as_str(), None, None),
+                };
+
+                // Entropy check
+                if let Some(min_entropy) = rule.entropy {
+                    if shannon_entropy(check_str) < min_entropy {
+                        continue;
                     }
                 }
-                for entry in matches.into_iter().rev() {
-                    let (rs, re) = match (entry.capture_start, entry.capture_end) {
-                        (Some(s), Some(e)) => (s, e),
-                        _ => (entry.start, entry.end),
-                    };
-                    text.replace_range(rs..re, &self.placeholder);
-                    count += 1;
-                }
-            } else {
-                // No entropy threshold: global replacement.
-                // If the regex has a capture group, only group 1 is redacted
-                // and the rest of the match is preserved as context.
-                let replaced = rule.regex.replace_all(&text, |caps: &regex::Captures| {
-                    count += 1;
-                    if caps.len() >= 2 {
-                        // Preserve context around the captured value
-                        let full_match = caps.get(0).unwrap();
-                        let value = caps.get(1).unwrap();
-                        let before = &full_match.as_str()[..value.start() - full_match.start()];
-                        let after = &full_match.as_str()[value.end() - full_match.start()..];
-                        format!("{}{}{}", before, self.placeholder, after)
-                    } else {
-                        self.placeholder.as_str().to_owned()
+
+                // ML threshold check
+                if self.ml_threshold > 0.0 {
+                    let line = crate::ml::extract_line(&text, full.start());
+                    let features = crate::ml::compute_features(value_str, line, &self.filename);
+                    if !crate::ml::predict(&features, self.ml_threshold) {
+                        continue;
                     }
+                }
+
+                matches.push(MatchEntry {
+                    start: full.start(),
+                    end: full.end(),
+                    capture_start,
+                    capture_end,
                 });
-                text = replaced.into_owned();
+            }
+
+            // Replace in reverse order to preserve positions
+            for entry in matches.into_iter().rev() {
+                let (rs, re) = match (entry.capture_start, entry.capture_end) {
+                    (Some(s), Some(e)) => (s, e),
+                    _ => (entry.start, entry.end),
+                };
+                // Preserve context around the captured value
+                let before = &text[entry.start..rs].to_string();
+                let after = &text[re..entry.end].to_string();
+                let replacement = if before.is_empty() && after.is_empty() {
+                    self.placeholder.clone()
+                } else {
+                    format!("{}{}{}", before, self.placeholder, after)
+                };
+                text.replace_range(entry.start..entry.end, &replacement);
+                count += 1;
             }
 
             if count > 0 {
@@ -232,5 +256,78 @@ mod tests {
         let outcome = redactor.redact("just regular text here");
         assert_eq!(outcome.text, "just regular text here");
         assert_eq!(outcome.total(), 0);
+    }
+
+    // -----------------------------------------------------------------------
+    // ML threshold filter tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn redact_ml_threshold_disabled_by_default() {
+        let rule = Rule {
+            id: "test".into(),
+            regex: Regex::new(r"\b[A-Za-z0-9]{10,}\b").unwrap(),
+            entropy: None,
+        };
+        let redactor = Redactor::new(vec![rule], "[CAVIARDER]")
+            .with_filename("file.env");
+        let outcome = redactor.redact("x = abc123def456");
+        // Default threshold 0.0 = disabled, so this should be redacted
+        assert_eq!(outcome.text, "x = [CAVIARDER]");
+        assert_eq!(outcome.total(), 1);
+    }
+
+    #[test]
+    fn redact_ml_threshold_suppresses_low_score() {
+        // A low-entropy, simple string should get a very low ML score
+        let rule = Rule {
+            id: "test".into(),
+            regex: Regex::new(r"\b[A-Za-z0-9]+\b").unwrap(),
+            entropy: None,
+        };
+        let redactor = Redactor::new(vec![rule], "[CAVIARDER]")
+            .with_ml_threshold(0.9)  // Very high threshold
+            .with_filename("file.py");
+        let outcome = redactor.redact("a = aaaaaaa");
+        // "aaaaaaa" is all same char → entropy 0, low ML score → suppressed
+        assert_eq!(outcome.text, "a = aaaaaaa");
+        assert_eq!(outcome.total(), 0);
+    }
+
+    #[test]
+    fn redact_ml_threshold_low_threshold_keeps_everything() {
+        let rule = Rule {
+            id: "test".into(),
+            regex: Regex::new(r"\b[A-Za-z0-9]+\b").unwrap(),
+            entropy: None,
+        };
+        let redactor = Redactor::new(vec![rule], "[CAVIARDER]")
+            .with_ml_threshold(0.001)  // Very low threshold
+            .with_filename("file.py");
+        let outcome = redactor.redact("x = hello");
+        // Almost everything passes a threshold of 0.001
+        assert_eq!(outcome.text, "x = [CAVIARDER]");
+        assert_eq!(outcome.total(), 1);
+    }
+
+    #[test]
+    fn redact_ml_threshold_with_entropy() {
+        // Both entropy filter and ML filter active
+        let rule = Rule {
+            id: "test".into(),
+            regex: Regex::new(r"\b[A-Za-z0-9/+=-]{10,}\b").unwrap(),
+            entropy: Some(3.0),  // Only matches with entropy >= 3.0
+        };
+        let redactor = Redactor::new(vec![rule], "[CAVIARDER]")
+            .with_ml_threshold(0.5)
+            .with_filename("file.env");
+        // "AAAAABBBBB" has low entropy (~1.0) → blocked by entropy filter first
+        // "sk-proj-A1b2C3d4E5f6" has high entropy → but ML score might be low
+        let outcome = redactor.redact("x = AAAAABBBBB y = sk-proj-A1b2C3d4E5f6");
+        // "AAAAABBBBB" has entropy ≈ 1.0 < 3.0 → dropped by entropy
+        // "sk-proj-A1b2C3d4E5f6" has entropy > 3.0 → passed entropy, now ML decides
+        // This should have a reasonable ML score since it has mixed chars, digits, special
+        // We just check that it doesn't crash and total is reasonable
+        assert!(outcome.total() <= 1);
     }
 }

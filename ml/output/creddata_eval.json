@@ -1,0 +1,12 @@
+{
+  "dataset": "CredData",
+  "n_samples": 66898,
+  "n_positive": 15104,
+  "n_negative": 51794,
+  "best_threshold": 0.13,
+  "best_f1": 0.6918303700607659,
+  "best_precision": 0.6724795299706232,
+  "best_recall": 0.7123278601694916,
+  "best_mcc": 0.5990154971443551,
+  "roc_auc": 0.869082097963829
+}

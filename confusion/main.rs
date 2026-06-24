@@ -53,6 +53,7 @@
 
 use caviarder::rules;
 use caviarder::{Redactor, Rule};
+use clap::Parser;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
@@ -108,7 +109,21 @@ fn load_metadata() -> Vec<Entry> {
     entries
 }
 
+/// Evaluate caviarder (+ optional ML filter) on CredData.
+#[derive(Parser, Debug)]
+#[command(name = "cav-bench-confusion", version, about)]
+struct Args {
+    /// ML false-positive filter threshold (0.0 = disabled).
+    #[arg(long, default_value = "0.0")]
+    ml_threshold: f64,
+
+    /// Filename hint for ML feature computation.
+    #[arg(long, default_value = "")]
+    ml_filename: String,
+}
+
 fn main() {
+    let args = Args::parse();
     let entries = load_metadata();
     eprintln!("Loaded {} metadata entries", entries.len());
 
@@ -133,7 +148,17 @@ fn main() {
     eprintln!("Loaded {} rules", full_rules.len());
     let num_rules = full_rules.len();
 
-    let redactor = Redactor::new(full_rules, "[CAVIARDER]");
+    let mut redactor = Redactor::new(full_rules, "[CAVIARDER]");
+    if args.ml_threshold > 0.0 {
+        redactor = redactor.with_ml_threshold(args.ml_threshold);
+        if !args.ml_filename.is_empty() {
+            redactor = redactor.with_filename(&args.ml_filename);
+        }
+    }
+
+    if args.ml_threshold > 0.0 {
+        eprintln!("ML threshold: {}", args.ml_threshold);
+    }
 
     let mut tp = 0usize;
     let mut fp = 0usize;
@@ -164,6 +189,10 @@ fn main() {
             }
         };
 
+        // Pass the actual file path for ML feature computation
+        if args.ml_threshold > 0.0 {
+            redactor = redactor.with_filename(&entry.file_path);
+        }
         let outcome = redactor.redact(line);
         let was_redacted = outcome.text != line;
 
