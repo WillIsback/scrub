@@ -15,13 +15,13 @@ path = "src/main.rs"
 [dependencies]
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
+csv = "1"
 regex = "1"
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
 
 [dev-dependencies]
 criterion = { version = "0.8", features = ["html_reports"] }
-csv = "1"
 [[bin]]
 name = "cav-bench-confusion"
 path = "confusion/main.rs"

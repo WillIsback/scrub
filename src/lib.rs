@@ -54,11 +54,9 @@ impl Redactor {
                 let mut matches: Vec<MatchEntry> = Vec::new();
                 for caps in rule.regex.captures_iter(&text) {
                     let full = caps.get(0).unwrap();
-                    let (check_str, capture_start, capture_end) = if caps.len() >= 2 {
-                        let v = caps.get(1).unwrap();
-                        (v.as_str(), Some(v.start()), Some(v.end()))
-                    } else {
-                        (full.as_str(), None, None)
+                    let (check_str, capture_start, capture_end) = match caps.get(1) {
+                        Some(v) => (v.as_str(), Some(v.start()), Some(v.end())),
+                        None => (full.as_str(), None, None),
                     };
                     if shannon_entropy(check_str) >= min_entropy {
                         matches.push(MatchEntry {
