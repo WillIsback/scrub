@@ -22,7 +22,16 @@
 //!    - **FP**: redacted but labeled F (false alarm)
 //!    - **FN**: not redacted but labeled T (missed secret)
 //!    - **TN**: not redacted AND labeled F (correct ignore)
-//! 4. Compute precision, recall, F1, accuracy
+//! 4. Compute precision, recall, F1, MCC, accuracy
+//!
+//! ## Methodology note vs Official CredData benchmarks
+//!
+//! The official CredData benchmark scans **all 19.4M lines** of the repository files.
+//! Our benchmark scans only the **66,898 pre-identified suspicious lines** from metadata.
+//! This means our results (higher recall/precision) are not directly comparable to the
+//! official benchmark numbers reported by CredSweeper, gitleaks, truffleHog, etc.
+//! We include the official numbers as a reference — the key comparison is qualitative:
+//! which pattern classes each tool handles well.
 //!
 //! ## How to run
 //!
@@ -199,6 +208,14 @@ fn main() {
     } else {
         0.0
     };
+    // Matthews Correlation Coefficient — robust to class imbalance
+    let mcc_denom =
+        ((tp + fp) as f64 * (tp + fn_) as f64 * (tn + fp) as f64 * (tn + fn_) as f64).sqrt();
+    let mcc = if mcc_denom > 0.0 {
+        ((tp as f64 * tn as f64) - (fp as f64 * fn_ as f64)) / mcc_denom
+    } else {
+        0.0
+    };
 
     // Write structured JSON results to bench-results/
     let version = env!("CARGO_PKG_VERSION");
@@ -210,7 +227,7 @@ fn main() {
     let _ = fs::create_dir_all(RESULTS_DIR);
 
     let json_body = format!(
-        r#"{{"version":"{version}","dataset":"Samsung/CredData ({total} instances)","unix_ts":{ts},"rules_loaded":{rules},"metrics":{{"tp":{tp},"fp":{fp},"fn":{fn_},"tn":{tn},"precision":{p:.4},"recall":{r:.4},"f1":{f1_:.4},"accuracy":{acc:.4}}},"baseline_gitleaks":{{"precision":0.526,"recall":0.244,"f1":0.334}}}}"#,
+        r#"{{"version":"{version}","dataset":"Samsung/CredData ({total} instances)","unix_ts":{ts},"rules_loaded":{rules},"metrics":{{"tp":{tp},"fp":{fp},"fn":{fn_},"tn":{tn},"precision":{p:.4},"recall":{r:.4},"f1":{f1_:.4},"mcc":{mcc_:.4},"accuracy":{acc:.4}}},"baseline_official":{{"credSweeper":{{"precision":0.917,"recall":0.808,"f1":0.859,"mcc":0.860}},"gitleaks":{{"precision":0.526,"recall":0.244,"f1":0.334,"mcc":0.358}}}}}}"#,
         version = version,
         ts = timestamp,
         rules = num_rules,
@@ -221,6 +238,7 @@ fn main() {
         p = precision,
         r = recall,
         f1_ = f1,
+        mcc_ = mcc,
         acc = accuracy,
     );
 
@@ -272,12 +290,21 @@ fn main() {
     println!("   Precision:  {:.1}%", precision * 100.0);
     println!("   Recall:     {:.1}%", recall * 100.0);
     println!("   F1:         {:.3}", f1);
+    println!("   MCC:        {:.3}", mcc);
     println!("   Accuracy:   {:.1}%", accuracy * 100.0);
     println!();
-    println!(" Baseline (gitleaks on CredData):");
-    println!("   Precision:  52.6%");
-    println!("   Recall:     24.4%");
-    println!("   F1:         0.334");
+    println!("--- Comparison: Official CredData Benchmarks (full-file scan) ---");
+    println!(" Tool             Precision  Recall     F1      MCC");
+    println!(" ---------------- ---------- ---------- ------- -------");
+    println!(" CredSweeper      91.7%      80.8%      0.859   0.860");
+    println!(" gitleaks         52.6%      24.4%      0.334   0.358");
+    println!(" detect-secrets   14.2%      38.1%      0.206   0.232");
+    println!(" truffleHog3      15.0%      54.7%      0.235   0.286");
+    println!(" shhgit           51.9%       7.2%      0.126   0.193");
+    println!(" -----------------------------------------------------------------");
+    println!(" ⚠ NOTE: Our benchmark scans only the 67K pre-identified suspicious");
+    println!("   lines (metadata). The official benchmark scans ALL 19.4M lines");
+    println!("   of code in the dataset. Results are NOT directly comparable.");
     println!();
 
     // --- Interpretation ---
@@ -298,7 +325,9 @@ fn main() {
     println!("   Recall    = TP / (TP + FN)   — what fraction of real secrets do we");
     println!("                                 catch?");
     println!("   F1        = harmonic mean of precision & recall (balanced score)");
-    println!("   Accuracy  = (TP + TN) / Total");
+    println!("   MCC       = Matthews Correlation Coefficient (robust to imbalance)");
+    println!("               range: -1 (total disagreement) to +1 (perfect prediction)");
+    println!("   Accuracy  = (TP + TN) / Total — biased toward majority class");
     println!();
 
     // Print sampled missed secrets (FN)
